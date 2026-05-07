@@ -1,0 +1,55 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #151d3d 0%, #050713 58%, #000 100%);
+  color: #edf6ff;
+  font-family: Arial, "Microsoft YaHei", sans-serif;
+}
+
+.game-shell {
+  width: min(100vw, 1040px);
+  padding: 18px;
+  text-align: center;
+}
+
+.game-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  letter-spacing: 0.08em;
+}
+
+.game-header p,
+.game-help {
+  margin: 0 0 12px;
+  color: #aebcf7;
+  font-size: 15px;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  height: auto;
+  margin: 0 auto;
+  background: #02030a;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 0 36px rgba(78, 172, 255, 0.24);
+}
+
+.game-help {
+  margin-top: 12px;
+}
