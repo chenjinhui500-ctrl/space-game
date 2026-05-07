@@ -1,0 +1,34 @@
+{
+  "project": "星舰幸存者",
+  "visual_direction": [
+    "deep space",
+    "simple cartoon sci-fi",
+    "rounded silhouettes",
+    "high readability",
+    "low complexity",
+    "lightweight 2.5D top-down/slight isometric",
+    "clean unified prototype-ready assets"
+  ],
+  "global_prompt_keywords": [
+    "stylized sci-fi game asset",
+    "clean silhouette",
+    "rounded shapes",
+    "readable at small size",
+    "lightweight 2.5D top-down or slight isometric feel",
+    "simple cartoon space style",
+    "game-ready asset",
+    "consistent visual language",
+    "low complexity",
+    "high recognizability"
+  ],
+  "negative_prompt": "photorealistic, gritty realism, complex painterly illustration, messy details, tiny unreadable parts, text labels, watermark, logo, horror gore, noisy background",
+  "output_standards": {
+    "ships": "1024x1024 PNG transparent",
+    "enemies": "1024x1024 PNG transparent",
+    "planets": "1024x1024 PNG transparent",
+    "weapons/effects": "512x512 PNG transparent",
+    "resources": "512x512 PNG transparent",
+    "ui": "256x256 PNG transparent",
+    "backgrounds": "1920x1080 PNG opaque"
+  }
+}
