@@ -1,0 +1,164 @@
+name: Generate Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      priority:
+        description: "Asset priority batch to generate"
+        required: true
+        default: "P0"
+        type: choice
+        options:
+          - P0
+          - P1
+          - P2
+          - P3
+          - all
+      limit:
+        description: "Maximum number of todo assets to generate in this run"
+        required: true
+        default: "3"
+        type: string
+      export_final:
+        description: "Export selected/default final PNGs after generation"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: "3.11"
+  OUTPUT_BRANCH: asset-generation-output
+
+jobs:
+  generate-assets:
+    name: Generate asset candidates
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Validate inputs
+        run: |
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "OPENAI_API_KEY secret is not configured. Add it in Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+          if ! [[ "${{ inputs.limit }}" =~ ^[0-9]+$ ]]; then
+            echo "limit must be a non-negative integer. Received: ${{ inputs.limit }}"
+            exit 1
+          fi
+
+      - name: Check asset integrity before generation
+        run: python scripts/check_asset_integrity.py
+
+      - name: Generate raw candidate assets
+        run: |
+          PRIORITY="${{ inputs.priority }}"
+          LIMIT="${{ inputs.limit }}"
+          CMD=(python scripts/generate_assets.py --limit "$LIMIT")
+          if [ "$PRIORITY" != "all" ]; then
+            CMD+=(--priority "$PRIORITY")
+          fi
+          "${CMD[@]}"
+
+      - name: Make contact sheets
+        run: |
+          PRIORITY="${{ inputs.priority }}"
+          CMD=(python scripts/make_contact_sheets.py)
+          if [ "$PRIORITY" != "all" ]; then
+            CMD+=(--priority "$PRIORITY")
+          fi
+          "${CMD[@]}"
+
+      - name: Export final PNG assets
+        if: ${{ inputs.export_final }}
+        run: |
+          PRIORITY="${{ inputs.priority }}"
+          CMD=(python scripts/export_final_assets.py)
+          if [ "$PRIORITY" != "all" ]; then
+            CMD+=(--priority "$PRIORITY")
+          fi
+          "${CMD[@]}"
+
+      - name: Generate asset index
+        run: python scripts/generate_asset_index.py
+
+      - name: Check asset integrity after generation
+        run: python scripts/check_asset_integrity.py
+
+      - name: Generate asset report
+        run: python scripts/generate_asset_report.py
+
+      - name: Upload generated asset artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-assets-${{ inputs.priority }}-${{ github.run_number }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            assets/generated/raw/
+            assets/generated/contact_sheets/
+            assets/final/
+            docs/ASSET_REPORT.md
+            src/generatedAssetIndex.js
+            assets/generated/logs/
+
+      - name: Commit generated outputs to branch
+        if: ${{ success() }}
+        id: commit_outputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${OUTPUT_BRANCH}"
+
+          git add assets/manifest/assets_manifest.json assets/manifest/assets_manifest.csv docs/ASSET_REPORT.md src/generatedAssetIndex.js assets/generated/logs/
+          git add -f assets/generated/raw/ assets/generated/contact_sheets/ assets/final/
+
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No generated asset changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Add generated asset outputs from workflow run ${{ github.run_number }}"
+          git push --force-with-lease origin "${OUTPUT_BRANCH}"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request for generated outputs
+        if: ${{ success() && steps.commit_outputs.outputs.has_changes == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh pr view "${OUTPUT_BRANCH}" --json number --jq .number >/tmp/generated_asset_pr_number 2>/dev/null; then
+            PR_NUMBER="$(cat /tmp/generated_asset_pr_number)"
+            echo "Pull request already exists: #${PR_NUMBER}"
+          else
+            gh pr create \
+              --base "${{ github.ref_name }}" \
+              --head "${OUTPUT_BRANCH}" \
+              --title "Add generated asset outputs" \
+              --body "Generated by the **Generate Assets** workflow.\n\nInputs:\n- priority: ${{ inputs.priority }}\n- limit: ${{ inputs.limit }}\n- export_final: ${{ inputs.export_final }}\n\nArtifacts are also attached to workflow run ${{ github.run_number }}."
+          fi
