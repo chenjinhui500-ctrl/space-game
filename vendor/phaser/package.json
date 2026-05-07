@@ -1,0 +1,7 @@
+{
+  "name": "phaser",
+  "version": "3.90.0-local-offline",
+  "type": "module",
+  "main": "index.js",
+  "exports": "./index.js"
+}
