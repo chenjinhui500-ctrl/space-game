@@ -1,0 +1,6 @@
+{
+  "name": "vite",
+  "version": "7.1.12-local-offline",
+  "type": "module",
+  "bin": { "vite": "bin/vite.js" }
+}
