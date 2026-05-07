@@ -1,0 +1,4 @@
+Black box data salvage. dark compact recorder box with blue light, no text. stylized sci-fi game asset, clean silhouette, rounded shapes, readable at small size, lightweight 2.5D top-down or slight isometric feel, simple cartoon space style, game-ready asset, consistent visual language, low complexity, high recognizability, transparent background. Centered composition, clean edges, prototype-friendly asset for 星舰幸存者 / Starship Survivors.
+
+Negative prompt:
+photorealistic, gritty realism, complex painterly illustration, messy details, tiny unreadable parts, text labels, watermark, logo, horror gore, noisy background

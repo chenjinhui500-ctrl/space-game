@@ -1,0 +1,90 @@
+id,category,subcategory,zh_name,en_name,description,output_width,output_height,transparent_background,priority,status,final_output_path
+ship_player_t1_explorer,ships,player_ship,T1探索船,t1_explorer,Small blue-white explorer starship with central cockpit and rear thrusters,1024,1024,True,P0,todo,assets/final/ships/ship_player_t1_explorer.png
+ship_player_t2_scout,ships,player_ship,T2侦察船,t2_scout,Faster scout starship evolution with sensor fins,1024,1024,True,P2,todo,assets/final/ships/ship_player_t2_scout.png
+ship_player_t3_fighter,ships,player_ship,T3战斗机,t3_fighter,Combat fighter evolution for bullet-heaven survival,1024,1024,True,P2,todo,assets/final/ships/ship_player_t3_fighter.png
+ship_player_t4_gunboat,ships,player_ship,T4炮艇,t4_gunboat,Heavy gunboat player ship with reinforced weapon pods,1024,1024,True,P2,todo,assets/final/ships/ship_player_t4_gunboat.png
+ship_player_t5_cruiser,ships,player_ship,T5巡航舰,t5_cruiser,Large cruiser evolution for late-run builds,1024,1024,True,P3,todo,assets/final/ships/ship_player_t5_cruiser.png
+ship_player_t6_super,ships,player_ship,T6超级飞船,t6_super_ship,Ultimate super starship evolution,1024,1024,True,P3,todo,assets/final/ships/ship_player_t6_super.png
+ship_state_player_hit,effects,ship_state,玩家受击状态,player_hit_state,Impact flash overlay for player ship taking damage,512,512,True,P2,todo,assets/final/effects/ship_state_player_hit.png
+ship_state_player_shield,effects,ship_state,玩家护盾状态,player_shield_state,Protective shield aura around player ship,512,512,True,P1,todo,assets/final/effects/ship_state_player_shield.png
+effect_thruster_flame_basic,effects,ship_effect,推进器火焰,thruster_flame_basic,Small rear thruster flame for player ship movement,512,512,True,P0,todo,assets/final/effects/effect_thruster_flame_basic.png
+effect_ship_evolution_burst,effects,ship_effect,进化特效,ship_evolution_burst,Level-up evolution burst for ship transformation,512,512,True,P2,todo,assets/final/effects/effect_ship_evolution_burst.png
+weapon_laser_basic,weapons,projectile,基础激光占位,basic_laser,Basic automatic attack laser projectile placeholder,512,512,True,P0,todo,assets/final/weapons/weapon_laser_basic.png
+weapon_laser_beam,weapons,beam,激光束,laser_beam,Long laser beam weapon effect,512,512,True,P1,todo,assets/final/weapons/weapon_laser_beam.png
+weapon_scatter_shot,weapons,projectile,散射弹,scatter_shot,Triangular scatter bullet projectile,512,512,True,P1,todo,assets/final/weapons/weapon_scatter_shot.png
+weapon_homing_missile,weapons,projectile,跟踪导弹,homing_missile,Small homing missile with tiny exhaust trail,512,512,True,P1,todo,assets/final/weapons/weapon_homing_missile.png
+effect_small_explosion,effects,explosion,小爆炸,small_explosion,Small explosion effect for hits and basic enemies,512,512,True,P0,todo,assets/final/effects/effect_small_explosion.png
+effect_large_explosion,effects,explosion,爆炸,large_explosion,Larger explosion effect for elites and planets,512,512,True,P1,todo,assets/final/effects/effect_large_explosion.png
+weapon_chain_lightning,weapons,beam,电链,chain_lightning,Chain lightning weapon arc,512,512,True,P1,todo,assets/final/weapons/weapon_chain_lightning.png
+weapon_gravity_field,effects,area_weapon,引力场,gravity_field,Circular gravity field area effect,512,512,True,P2,todo,assets/final/effects/weapon_gravity_field.png
+weapon_shield_pulse,effects,area_weapon,护盾脉冲,shield_pulse,Expanding shield pulse ring,512,512,True,P2,todo,assets/final/effects/weapon_shield_pulse.png
+weapon_drone_shot,weapons,projectile,无人机射击,drone_shot,Small drone bullet shot,512,512,True,P2,todo,assets/final/weapons/weapon_drone_shot.png
+weapon_plasma_cannon,weapons,projectile,等离子炮,plasma_cannon,Plasma cannon projectile,512,512,True,P2,todo,assets/final/weapons/weapon_plasma_cannon.png
+enemy_basic_small_ship,enemies,enemy_unit,小型飞船,basic_small_ship,Basic small enemy ship for swarms,1024,1024,True,P0,todo,assets/final/enemies/enemy_basic_small_ship.png
+enemy_mini_fleet,enemies,enemy_unit,迷你舰队,mini_fleet,Mini fleet cluster enemy,1024,1024,True,P2,todo,assets/final/enemies/enemy_mini_fleet.png
+enemy_kamikaze_ship,enemies,enemy_unit,自爆舰,kamikaze_ship,Suicide bomber enemy ship,1024,1024,True,P1,todo,assets/final/enemies/enemy_kamikaze_ship.png
+enemy_gunboat,enemies,enemy_unit,炮艇,gunboat,Enemy gunboat with side cannons,1024,1024,True,P1,todo,assets/final/enemies/enemy_gunboat.png
+enemy_swarm_bug,enemies,enemy_unit,虫群,swarm_bug,Space bug swarm unit,1024,1024,True,P1,todo,assets/final/enemies/enemy_swarm_bug.png
+enemy_poison_sac,enemies,enemy_unit,毒囊怪,poison_sac,Poison sac monster enemy,1024,1024,True,P2,todo,assets/final/enemies/enemy_poison_sac.png
+enemy_shielded_brute,enemies,enemy_unit,护盾怪,shielded_brute,Shielded enemy brute,1024,1024,True,P2,todo,assets/final/enemies/enemy_shielded_brute.png
+enemy_drone,enemies,enemy_unit,无人机,drone,Small enemy drone,1024,1024,True,P1,todo,assets/final/enemies/enemy_drone.png
+enemy_turret_satellite,enemies,enemy_unit,炮台卫星,turret_satellite,Orbital turret satellite enemy,1024,1024,True,P2,todo,assets/final/enemies/enemy_turret_satellite.png
+enemy_phase_wraith,enemies,enemy_unit,相位怪,phase_wraith,Phase-shifting ghostlike space enemy,1024,1024,True,P3,todo,assets/final/enemies/enemy_phase_wraith.png
+enemy_elite_cruiser,enemies,enemy_unit,精英舰,elite_cruiser,Elite enemy cruiser,1024,1024,True,P2,todo,assets/final/enemies/enemy_elite_cruiser.png
+enemy_mother_guardian,enemies,enemy_unit,母体守卫,mother_guardian,Mother guardian boss escort,1024,1024,True,P3,todo,assets/final/enemies/enemy_mother_guardian.png
+planet_fire_war,planets,planet_body,赤焰战争星,fire_war_planet,Red-orange fire war planet challenge body,1024,1024,True,P0,todo,assets/final/planets/planet_fire_war.png
+planet_rock_mining,planets,planet_body,碎岩矿星,rock_mining_planet,Gray-yellow broken mining planet challenge body,1024,1024,True,P0,todo,assets/final/planets/planet_rock_mining.png
+planet_hive_breeding,planets,planet_body,虫巢孵化星,hive_breeding_planet,Purple-green organic hive incubation planet,1024,1024,True,P0,todo,assets/final/planets/planet_hive_breeding.png
+planet_void_rift,planets,planet_body,虚空裂隙星,void_rift_planet,Void rift planet challenge body,1024,1024,True,P2,todo,assets/final/planets/planet_void_rift.png
+planet_machine_foundry,planets,planet_body,机械铸造星,machine_foundry_planet,Mechanical foundry planet,1024,1024,True,P2,todo,assets/final/planets/planet_machine_foundry.png
+planet_electromagnetic_storm,planets,planet_body,电磁风暴星,electromagnetic_storm_planet,Electromagnetic storm planet,1024,1024,True,P2,todo,assets/final/planets/planet_electromagnetic_storm.png
+planet_core_basic,planets,planet_body,星球核心,planet_core_basic,Planet core target after outer layers are defeated,1024,1024,True,P1,todo,assets/final/planets/planet_core_basic.png
+planet_state_suppressed,planets,planet_body,星球压制状态,planet_suppressed_state,Visual reward state for a suppressed conquered planet,1024,1024,True,P1,todo,assets/final/planets/planet_state_suppressed.png
+effect_planet_range_outer_basic,effects,planet_range,星球外圈范围特效,planet_outer_range_basic,Outer planet warning range ring,512,512,True,P0,todo,assets/final/effects/effect_planet_range_outer_basic.png
+effect_planet_range_middle_basic,effects,planet_range,星球中圈范围特效,planet_middle_range_basic,Middle planet alert range ring,512,512,True,P1,todo,assets/final/effects/effect_planet_range_middle_basic.png
+effect_planet_range_inner_danger,effects,planet_range,星球内圈危险特效,planet_inner_danger,Inner lethal danger range effect,512,512,True,P1,todo,assets/final/effects/effect_planet_range_inner_danger.png
+bg_deep_space_main,backgrounds,space_background,深空背景,deep_space_main,Main deep space background for current prototype,1920,1080,False,P0,todo,assets/final/backgrounds/bg_deep_space_main.png
+bg_nebula_blue,backgrounds,space_background,星云,blue_nebula,Soft nebula background layer,1920,1080,False,P1,todo,assets/final/backgrounds/bg_nebula_blue.png
+env_distant_planet,environment,distant_object,远景星球,distant_planet,Distant background planet prop,1024,1024,True,P1,todo,assets/final/environment/env_distant_planet.png
+env_asteroid_basic,environment,hazard,小行星,asteroid_basic,Basic asteroid hazard prop,1024,1024,True,P1,todo,assets/final/environment/env_asteroid_basic.png
+env_ore_chunk,environment,resource_node,矿石,ore_chunk,Ore chunk environmental resource node,1024,1024,True,P1,todo,assets/final/environment/env_ore_chunk.png
+env_fleet_wreckage,environment,debris,舰队残骸,fleet_wreckage,Broken fleet wreckage environmental obstacle,1024,1024,True,P2,todo,assets/final/environment/env_fleet_wreckage.png
+env_space_rift,environment,hazard,空间裂隙,space_rift,Space rift environmental hazard,1024,1024,True,P2,todo,assets/final/environment/env_space_rift.png
+env_black_hole,environment,hazard,黑洞,black_hole,Black hole hazard object,1024,1024,True,P3,todo,assets/final/environment/env_black_hole.png
+env_poison_fog,environment,region_effect,毒雾,poison_fog,Toxic fog region effect,1024,1024,True,P2,todo,assets/final/environment/env_poison_fog.png
+env_energy_storm,environment,region_effect,能量风暴,energy_storm,Energy storm region effect,1024,1024,True,P2,todo,assets/final/environment/env_energy_storm.png
+station_rest_basic,stations,rest_station,休息站主体,rest_station_basic,Basic rest station safe hub,1024,1024,True,P0,todo,assets/final/stations/station_rest_basic.png
+station_repair_bay,stations,rest_station,维修舱,repair_bay,Repair bay module for rest station,1024,1024,True,P1,todo,assets/final/stations/station_repair_bay.png
+station_shop_terminal,stations,rest_station,商店终端,shop_terminal,Shop terminal module,1024,1024,True,P2,todo,assets/final/stations/station_shop_terminal.png
+station_upgrade_terminal,stations,rest_station,升级终端,upgrade_terminal,Upgrade terminal module,1024,1024,True,P2,todo,assets/final/stations/station_upgrade_terminal.png
+station_portal,stations,rest_station,传送门,portal,Rest station jump portal,1024,1024,True,P1,todo,assets/final/stations/station_portal.png
+station_starmap_bg,stations,rest_station,星图界面背景,starmap_interface_background,Starmap interface background for route choice,1024,1024,True,P1,todo,assets/final/stations/station_starmap_bg.png
+effect_station_warp,effects,rest_station,休息站跃迁特效,station_warp_effect,Warp transition effect at rest station,512,512,True,P1,todo,assets/final/effects/effect_station_warp.png
+resource_exp_orb,resources,pickup,经验球,exp_orb,Experience orb pickup,512,512,True,P0,todo,assets/final/resources/resource_exp_orb.png
+resource_credits,resources,pickup,Credits,credits,Credits currency pickup,512,512,True,P1,todo,assets/final/resources/resource_credits.png
+resource_energy_battery,resources,pickup,能量电池,energy_battery,Energy battery pickup,512,512,True,P1,todo,assets/final/resources/resource_energy_battery.png
+resource_shield_fragment,resources,pickup,护盾碎片,shield_fragment,Shield fragment pickup,512,512,True,P1,todo,assets/final/resources/resource_shield_fragment.png
+resource_repair_kit,resources,pickup,修理包,repair_kit,Repair kit pickup,512,512,True,P1,todo,assets/final/resources/resource_repair_kit.png
+resource_metal_ore,resources,pickup,金属矿,metal_ore,Metal ore resource,512,512,True,P2,todo,assets/final/resources/resource_metal_ore.png
+resource_weapon_chip,resources,pickup,武器芯片,weapon_chip,Weapon chip upgrade material,512,512,True,P2,todo,assets/final/resources/resource_weapon_chip.png
+resource_bio_sample,resources,pickup,生物样本,bio_sample,Biological sample resource,512,512,True,P2,todo,assets/final/resources/resource_bio_sample.png
+resource_void_charge,resources,pickup,虚空电荷,void_charge,Void charge rare resource,512,512,True,P3,todo,assets/final/resources/resource_void_charge.png
+resource_black_box,resources,pickup,黑匣子,black_box,Black box data salvage,512,512,True,P3,todo,assets/final/resources/resource_black_box.png
+resource_star_core,resources,pickup,星核,star_core,Rare star core pickup,512,512,True,P3,todo,assets/final/resources/resource_star_core.png
+ui_icon_weapon,ui,system_icon,武器图标,weapon_icon,Generic weapon category icon,256,256,True,P1,todo,assets/final/ui/ui_icon_weapon.png
+ui_icon_upgrade,ui,system_icon,升级图标,upgrade_icon,Generic upgrade category icon,256,256,True,P1,todo,assets/final/ui/ui_icon_upgrade.png
+ui_icon_planet_type,ui,system_icon,星球类型图标,planet_type_icon,Generic planet type icon,256,256,True,P1,todo,assets/final/ui/ui_icon_planet_type.png
+ui_icon_resource,ui,system_icon,资源图标,resource_icon,Generic resource category icon,256,256,True,P1,todo,assets/final/ui/ui_icon_resource.png
+ui_icon_rest_station,ui,system_icon,休息站图标,rest_station_icon,Rest station UI icon,256,256,True,P0,todo,assets/final/ui/ui_icon_rest_station.png
+ui_icon_danger_level,ui,system_icon,危险等级图标,danger_level_icon,Danger level UI icon,256,256,True,P1,todo,assets/final/ui/ui_icon_danger_level.png
+ui_icon_minimap,ui,system_icon,小地图图标,minimap_icon,Minimap UI icon,256,256,True,P1,todo,assets/final/ui/ui_icon_minimap.png
+ui_icon_hp,ui,hud_icon,HP,hp_icon,HUD health icon,256,256,True,P0,todo,assets/final/ui/ui_icon_hp.png
+ui_icon_shield,ui,hud_icon,Shield,shield_icon,HUD shield icon,256,256,True,P0,todo,assets/final/ui/ui_icon_shield.png
+ui_icon_xp,ui,hud_icon,XP,xp_icon,HUD experience icon,256,256,True,P0,todo,assets/final/ui/ui_icon_xp.png
+ui_icon_level,ui,hud_icon,Level,level_icon,HUD level icon,256,256,True,P0,todo,assets/final/ui/ui_icon_level.png
+ui_icon_kill,ui,hud_icon,Kill,kill_icon,HUD kill count icon,256,256,True,P0,todo,assets/final/ui/ui_icon_kill.png
+ui_icon_timer,ui,hud_icon,Timer,timer_icon,HUD timer icon,256,256,True,P0,todo,assets/final/ui/ui_icon_timer.png
+ui_icon_warning,ui,hud_icon,Warning,warning_icon,HUD warning icon,256,256,True,P1,todo,assets/final/ui/ui_icon_warning.png
+ui_icon_rest_station_marker,ui,hud_icon,Rest station,rest_station_marker,HUD/minimap rest station marker,256,256,True,P1,todo,assets/final/ui/ui_icon_rest_station_marker.png
+ui_icon_planet_threat,ui,hud_icon,Planet threat,planet_threat_icon,HUD planet threat icon,256,256,True,P1,todo,assets/final/ui/ui_icon_planet_threat.png
+ui_icon_star_region,ui,hud_icon,Star region,star_region_icon,HUD star region icon,256,256,True,P1,todo,assets/final/ui/ui_icon_star_region.png
