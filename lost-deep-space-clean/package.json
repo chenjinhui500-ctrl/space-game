@@ -1,0 +1,19 @@
+{
+  "name": "lost-deep-space-clean",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "generate:assets": "node scripts/generate-assets.mjs"
+  },
+  "dependencies": {
+    "phaser": "file:vendor/phaser"
+  },
+  "devDependencies": {
+    "typescript": "file:vendor/typescript",
+    "vite": "file:vendor/vite"
+  }
+}
