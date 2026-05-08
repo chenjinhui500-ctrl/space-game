@@ -7,11 +7,30 @@ const args = process.argv.slice(2);
 const command = args[0] || 'dev';
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.ts': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml; charset=utf-8' };
 
-function transformMain(source) {
-  return source
-    .replace("import Phaser from 'phaser';", "import Phaser from './phaser.js';")
-    .replace('import "./styles.css";', '');
+function stripTypeScript(source) {
+  let output = source
+    .replace(/^type .*$/gm, '')
+    .replace(/document\.querySelector<[^>]+>/g, 'document.querySelector')
+    .replace(/\(window as any\)/g, 'window')
+    .replace(/let pointerStick: null \| \{[^}]+\} = null;/, 'let pointerStick = null;')
+    .replace(/function spawnGuard\(planet: Pick<Planet, 'x' \| 'y' \| 'kind'>\)/, 'function spawnGuard(planet)')
+    .replace(/\b(const|let|var)(\s+[A-Za-z_$][\w$]*)\s*:\s*[^=;]+(?=\s*[=;])/g, '$1$2')
+    .replace(/\)!/g, ')');
+
+  output = output.replace(/function\s+([A-Za-z_$][\w$]*)\(([^)]*)\)/g, (match, name, params) => {
+    const cleaned = params.split(',').map((param) => param.replace(/\s*:\s*.*$/, '')).join(',');
+    return `function ${name}(${cleaned})`;
+  });
+  return output;
 }
+
+function transformMain(source) {
+  return stripTypeScript(source)
+    .replace("import Phaser from 'phaser';", "import Phaser from './phaser.js';")
+    .replace('import \"./styles.css\";', '')
+    .replace("import './styles.css';", '');
+}
+
 
 function mkdir(dir) { fs.mkdirSync(dir, { recursive: true }); }
 function copyDir(from, to) {
