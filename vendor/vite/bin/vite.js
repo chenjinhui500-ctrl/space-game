@@ -37,7 +37,7 @@ function contentType(file) {
 function transformIndex(html, build = false) {
   const link = '<link rel="stylesheet" href="/src/styles.css"/>';
   html = html.includes('src/styles.css') ? html : html.replace('</head>', `${link}</head>`);
-  if (build) html = html.replace('/src/main.ts', '/assets/main.js').replace('/src/styles.css', '/assets/styles.css');
+  if (build) html = html.replace('/src/main.ts', './assets/main.js').replace('/src/styles.css', './assets/styles.css');
   return html;
 }
 
@@ -48,6 +48,7 @@ if (isBuild) {
   mkdirSync(join(dist, 'assets'), { recursive: true });
   if (existsSync(join(root, 'public'))) cpSync(join(root, 'public'), dist, { recursive: true });
   js = js.replace("import Phaser from '/node_modules/phaser/index.js';", "import Phaser from './phaser.js';");
+  js = js.replaceAll('`/assets/${key}.svg`', '`./assets/${key}.svg`');
   writeFileSync(join(dist, 'assets', 'main.js'), js);
   writeFileSync(join(dist, 'assets', 'phaser.js'), readFileSync(join(root, 'vendor', 'phaser', 'index.js')));
   writeFileSync(join(dist, 'assets', 'styles.css'), readFileSync(join(root, 'src', 'styles.css')));
