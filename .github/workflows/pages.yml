@@ -2,11 +2,9 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -14,69 +12,36 @@ permissions:
   pages: write
   id-token: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
   build:
-    name: Build H5 game
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
-
+          node-version: 20
       - name: Install dependencies
         run: npm install
-
       - name: Generate placeholder assets
         run: npm run generate:assets
-
-      - name: Build static site
+      - name: Build game
         run: npm run build
-
-      - name: Normalize GitHub Pages asset paths
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const files = ['dist/index.html', 'dist/assets/main.js'];
-          for (const file of files) {
-            if (!fs.existsSync(file)) continue;
-            let content = fs.readFileSync(file, 'utf8');
-            content = content
-              .replaceAll('"/assets/', '"./assets/')
-              .replaceAll("'/assets/", "'./assets/")
-              .replaceAll('`/assets/', '`./assets/');
-            fs.writeFileSync(file, content);
-          }
-          NODE
-
-      - name: Verify runtime smoke flow
+      - name: Verify runtime
         run: node scripts/verify-runtime.mjs
-
-      - name: Configure GitHub Pages
-        if: github.event_name == 'push'
-        uses: actions/configure-pages@v5
-
       - name: Upload Pages artifact
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-
   deploy:
-    name: Deploy H5 game
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

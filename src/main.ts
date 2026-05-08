@@ -1,176 +1,36 @@
 import Phaser from 'phaser';
 import './styles.css';
 
-type PlanetKind = 'low' | 'mid' | 'high' | 'ultimate' | 'neutral';
-type DropKind = 'coin' | 'xp' | 'tech' | 'black_box';
-type GameMode = 'menu' | 'playing' | 'paused' | 'docked' | 'levelup' | 'dead' | 'meta';
-type WeaponId = 'laser' | 'missile' | 'drone' | 'shield' | 'emp' | 'blackhole';
-type Civilisation = { id: string; zh: string; day: number; color: number; event: string };
-type SaveData = { bestDays: number; bestKills: number; explored: number; blackBoxes: number; tech: number; meta: Record<string, number>; blackBox?: BlackBoxData };
-type BlackBoxData = { x: number; y: number; days: number; coins: number; weapon: WeaponId };
-
-type Planet = { id: string; name: string; x: number; y: number; kind: PlanetKind; level: number; radius: number; range: number; asset: string; awakened?: number; visited?: boolean; danger?: number };
-type Enemy = Phaser.Physics.Arcade.Image & { hp: number; maxHp: number; speed: number; damage: number; xp: number; coins: number; kind: PlanetKind; shootAt: number };
-type Drop = Phaser.Physics.Arcade.Image & { kind: DropKind; value: number };
-type Bullet = Phaser.Physics.Arcade.Image & { damage: number; life: number; homing?: boolean; blast?: number };
-
-type Upgrade = { title: string; desc: string; apply: () => void; icon: WeaponId | 'ship' };
-
-const WIDTH = 1280;
-const HEIGHT = 720;
-const SAVE_KEY = 'lost-deep-space-drifter-save-v1';
-const DAY_MS = 60_000;
-const assets = ['ship_player','enemy_low','enemy_mid','enemy_high','planet_low','planet_mid','planet_high','planet_neutral','coin','xp','tech','black_box','weapon_laser','weapon_missile','weapon_drone','weapon_shield','weapon_emp','weapon_blackhole','civ_hive','civ_machine','civ_crystal','civ_gravity','civ_void','civ_time','civ_core'];
-const civs: Civilisation[] = [
-  { id: 'hive', zh: '虫巢母星', day: 3, color: 0x7cff8a, event: '虫群追猎' },
-  { id: 'machine', zh: '机械母星', day: 6, color: 0xb7c0d8, event: '轨道炮信标' },
-  { id: 'crystal', zh: '水晶母星', day: 9, color: 0xb088ff, event: '折射光束区' },
-  { id: 'gravity', zh: '引力母星', day: 12, color: 0x55ddff, event: '迷你黑洞' },
-  { id: 'void', zh: '虚空母星', day: 15, color: 0x7c5cff, event: '空间裂缝' },
-  { id: 'time', zh: '时间母星', day: 18, color: 0xffd36d, event: '时间迟滞' },
-  { id: 'core', zh: '深空核心', day: 22, color: 0xff5a79, event: '全图主脑猎杀' },
-];
-
-const defaultSave = (): SaveData => ({ bestDays: 0, bestKills: 0, explored: 0, blackBoxes: 0, tech: 0, meta: { hp: 0, shield: 0, attack: 0, radar: 0, recovery: 0, discount: 0 } });
-const loadSave = (): SaveData => ({ ...defaultSave(), ...(JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') as Partial<SaveData>) });
-const saveGame = (data: SaveData) => localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
-
-class MainScene extends Phaser.Scene {
-  mode: GameMode = 'menu';
-  save: SaveData = loadSave();
-  player!: Phaser.Physics.Arcade.Image;
-  cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  wasd!: Record<string, Phaser.Input.Keyboard.Key>;
-  planets: Planet[] = [];
-  enemies!: Phaser.Physics.Arcade.Group;
-  bullets!: Phaser.Physics.Arcade.Group;
-  drops!: Phaser.Physics.Arcade.Group;
-  planetSprites = new Map<string, Phaser.GameObjects.Image>();
-  ui!: Phaser.GameObjects.Container;
-  overlay!: Phaser.GameObjects.Container;
-  stars!: Phaser.GameObjects.TileSprite;
-  keys = { hp: 120, maxHp: 120, shield: 35, maxShield: 35, xp: 0, level: 1, coins: 0, tech: 0, kills: 0, explored: 0, speed: 260, attack: 1, magnet: 145, crit: 0.05 };
-  weapons: Record<WeaponId, number> = { laser: 1, missile: 1, drone: 1, shield: 1, emp: 0, blackhole: 0 };
-  timers = { laser: 0, missile: 0, emp: 0, blackhole: 0, spawn: 0, hazard: 0 };
-  runStart = 0;
-  lastDock?: Planet;
-  joystick?: { base: Phaser.GameObjects.Arc; knob: Phaser.GameObjects.Arc; pointer?: number; x: number; y: number; dx: number; dy: number };
-
-  preload() { for (const key of assets) this.load.svg(key, `/assets/${key}.svg`, { width: 96, height: 96 }); }
-
-  create() {
-    this.physics.world.setBounds(-1_000_000, -1_000_000, 2_000_000, 2_000_000);
-    this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x050719).setOrigin(0).setScrollFactor(0);
-    this.makeStars();
-    this.enemies = this.physics.add.group(); this.bullets = this.physics.add.group(); this.drops = this.physics.add.group();
-    this.player = this.physics.add.image(0, 0, 'ship_player').setCircle(30).setDepth(20).setVisible(false);
-    this.player.setDamping(true).setDrag(0.92).setMaxVelocity(420);
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
-    this.cursors = this.input.keyboard!.createCursorKeys();
-    this.wasd = this.input.keyboard!.addKeys('W,A,S,D,ESC') as Record<string, Phaser.Input.Keyboard.Key>;
-    this.input.keyboard!.on('keydown-ESC', () => { if (this.mode === 'playing') this.openMenu('paused'); });
-    this.physics.add.overlap(this.bullets, this.enemies, (b, e) => this.hitEnemy(b as Bullet, e as Enemy));
-    this.physics.add.overlap(this.player, this.enemies, (_, e) => this.damagePlayer((e as Enemy).damage * 0.03));
-    this.physics.add.overlap(this.player, this.drops, (_, d) => this.pickDrop(d as Drop));
-    this.createUi(); this.createJoystick(); this.openMenu('menu');
-  }
-
-  makeStars() {
-    const g = this.make.graphics({ x: 0, y: 0 }, false); g.fillStyle(0x071024).fillRect(0, 0, 1024, 1024);
-    for (let i = 0; i < 360; i++) { g.fillStyle(0xffffff, Phaser.Math.FloatBetween(0.25, 0.9)); g.fillCircle(Phaser.Math.Between(0, 1024), Phaser.Math.Between(0, 1024), Phaser.Math.FloatBetween(0.5, 2)); }
-    for (let i = 0; i < 12; i++) { g.fillStyle(Phaser.Utils.Array.GetRandom([0x2b4cff, 0x6633aa, 0x0f8faa]), 0.08); g.fillCircle(Phaser.Math.Between(0, 1024), Phaser.Math.Between(0, 1024), Phaser.Math.Between(60, 170)); }
-    g.generateTexture('starfield', 1024, 1024); g.destroy();
-    this.stars = this.add.tileSprite(0, 0, WIDTH, HEIGHT, 'starfield').setOrigin(0).setScrollFactor(0).setDepth(-10);
-  }
-
-  startRun() {
-    this.children.list.filter(o => !['uiRoot','overlayRoot'].includes(o.name)).forEach(o => { if (o !== this.player && o !== this.stars) o.destroy(); });
-    this.planets = []; this.planetSprites.clear(); this.enemies.clear(true, true); this.bullets.clear(true, true); this.drops.clear(true, true);
-    const m = this.save.meta; this.keys = { hp: 120 + m.hp * 20, maxHp: 120 + m.hp * 20, shield: 35 + m.shield * 12, maxShield: 35 + m.shield * 12, xp: 0, level: 1, coins: 0, tech: 0, kills: 0, explored: 0, speed: 260, attack: 1 + m.attack * 0.08, magnet: 145 + m.radar * 20, crit: 0.05 };
-    this.weapons = { laser: 1, missile: 1, drone: 1, shield: 1, emp: 0, blackhole: 0 }; this.timers = { laser: 0, missile: 0, emp: 0, blackhole: 0, spawn: 0, hazard: 0 };
-    this.player.setPosition(0, 0).setVisible(true).setActive(true); this.player.setVelocity(0, 0); this.runStart = this.time.now; this.mode = 'playing'; this.overlay.removeAll(true);
-    this.generatePlanetsAround(0, 0, true); this.spawnBlackBox();
-  }
-
-  generatePlanetsAround(cx: number, cy: number, initial = false) {
-    const grid = 900;
-    for (let gx = Math.floor((cx - 1800) / grid); gx <= Math.floor((cx + 1800) / grid); gx++) for (let gy = Math.floor((cy - 1800) / grid); gy <= Math.floor((cy + 1800) / grid); gy++) {
-      const id = `${gx}:${gy}`; if (this.planets.some(p => p.id === id)) continue;
-      const r = Phaser.Math.RND.frac(); const kind: PlanetKind = initial && gx === 0 && gy === 0 ? 'neutral' : r < .12 ? 'neutral' : r < .55 ? 'low' : r < .82 ? 'mid' : r < .96 ? 'high' : 'ultimate';
-      const p: Planet = { id, name: this.planetName(kind), x: gx * grid + Phaser.Math.Between(-260, 260), y: gy * grid + Phaser.Math.Between(-260, 260), kind, level: Math.max(1, Math.round(Math.hypot(gx, gy) + 1)), radius: kind === 'ultimate' ? 86 : kind === 'neutral' ? 68 : 58, range: kind === 'neutral' ? 160 : kind === 'ultimate' ? 430 : 260, asset: kind === 'low' ? 'planet_low' : kind === 'mid' ? 'planet_mid' : kind === 'high' || kind === 'ultimate' ? 'planet_high' : 'planet_neutral' };
-      this.planets.push(p); const img = this.add.image(p.x, p.y, p.asset).setDisplaySize(p.radius * 2, p.radius * 2).setDepth(2).setName('planet'); this.planetSprites.set(id, img);
-      this.add.circle(p.x, p.y, p.range, kind === 'neutral' ? 0x54ffcc : 0xff5577, .06).setStrokeStyle(2, kind === 'neutral' ? 0x54ffcc : 0xff5577, .23).setDepth(1).setName('planet');
-      this.add.text(p.x, p.y + p.radius + 12, p.name, { fontFamily: 'Microsoft YaHei,Arial', fontSize: '15px', color: '#dffbff', stroke: '#10203c', strokeThickness: 4 }).setOrigin(.5).setDepth(3).setName('planet');
-      for (let i = 0; i < 3; i++) this.add.circle(gx * grid + Phaser.Math.Between(-380, 380), gy * grid + Phaser.Math.Between(-380, 380), Phaser.Math.Between(9, 24), 0x8d9bb8, .55).setStrokeStyle(3, 0x10203c, .8).setDepth(0).setName('spaceDecor');
-      if (Phaser.Math.RND.frac() < .28) this.add.image(gx * grid + Phaser.Math.Between(-330, 330), gy * grid + Phaser.Math.Between(-330, 330), Phaser.Utils.Array.GetRandom(['coin','xp','tech'])).setDisplaySize(30, 30).setDepth(1).setName('spaceDecor');
-    }
-  }
-
-  planetName(kind: PlanetKind) { const pools = { low: ['软爪原星','茸芽绿洲','泡泡兽巢'], mid: ['齿轮港','蓝环工坊','脉冲城'], high: ['星辉议会','紫晶庭','苍穹矩阵'], ultimate: ['远古终端','沉睡母体','禁忌核心'], neutral: ['糖星驿站','暖光港','圆环休息站'] }; return Phaser.Utils.Array.GetRandom(pools[kind]); }
-
-  update(time: number, delta: number) {
-    this.stars.tilePositionX = this.cameras.main.scrollX * .18; this.stars.tilePositionY = this.cameras.main.scrollY * .18;
-    if (this.mode !== 'playing') return;
-    const dt = delta / 1000; this.generatePlanetsAround(this.player.x, this.player.y); this.movePlayer(dt); this.updateWeapons(time); this.updateEnemies(dt, time); this.updateDrops(dt); this.checkPlanets(time); this.updateCivEvents(time); this.updateUi();
-  }
-
-  movePlayer(dt: number) {
-    let x = 0, y = 0; if (this.cursors.left.isDown || this.wasd.A.isDown) x--; if (this.cursors.right.isDown || this.wasd.D.isDown) x++; if (this.cursors.up.isDown || this.wasd.W.isDown) y--; if (this.cursors.down.isDown || this.wasd.S.isDown) y++; if (this.joystick) { x += this.joystick.dx; y += this.joystick.dy; }
-    const len = Math.hypot(x, y); if (len > 0) this.player.setVelocity((x / len) * this.keys.speed, (y / len) * this.keys.speed); else this.player.setVelocity(this.player.body!.velocity.x * .85, this.player.body!.velocity.y * .85);
-    this.player.rotation = Math.atan2(this.player.body!.velocity.y, this.player.body!.velocity.x) + Math.PI / 2;
-    this.keys.shield = Math.min(this.keys.maxShield, this.keys.shield + dt * (4 + this.weapons.shield * 2));
-  }
-
-  nearestEnemy(max = 720) { let best: Enemy | undefined; let bd = max; for (const e of this.enemies.getChildren() as Enemy[]) { const d = dist(this.player, e); if (d < bd) { bd = d; best = e; } } return best; }
-  updateWeapons(time: number) {
-    const target = this.nearestEnemy();
-    if (target && time > this.timers.laser) { this.fire(target, 'weapon_laser', 640, 22 * this.keys.attack, false); this.timers.laser = time + Math.max(110, 430 - this.weapons.laser * 45); }
-    if (target && time > this.timers.missile) { for (let i = 0; i < this.weapons.missile; i++) this.fire(target, 'weapon_missile', 420, 34 * this.keys.attack, true, i * .18); this.timers.missile = time + 1500; }
-    if (this.weapons.emp && time > this.timers.emp) { this.enemies.getChildren().forEach(e => { if (dist(this.player, e as Enemy) < 260) this.hitEnemy({ damage: 16 * this.keys.attack, destroy: () => undefined, blast: 0 } as unknown as Bullet, e as Enemy); }); this.timers.emp = time + 3800; }
-    if (this.weapons.blackhole && target && time > this.timers.blackhole) { this.fire(target, 'weapon_blackhole', 320, 60 * this.keys.attack, true).blast = 150; this.timers.blackhole = time + 6200; }
-    this.drawDrones(time);
-  }
-  fire(target: Enemy, texture: string, speed: number, damage: number, homing = false, angleOffset = 0) { const b = this.bullets.create(this.player.x, this.player.y, texture) as Bullet; b.setDisplaySize(28, 28).setCircle(14).setDepth(15); b.damage = Math.random() < this.keys.crit ? damage * 2 : damage; b.life = 2200; b.homing = homing; this.physics.moveToObject(b, target, speed); b.rotation = Math.atan2(b.body!.velocity.y, b.body!.velocity.x) + angleOffset; return b; }
-  drawDrones(time: number) { for (let i = 0; i < this.weapons.drone; i++) { const a = time / 420 + i * Math.PI * 2 / this.weapons.drone; const x = this.player.x + Math.cos(a) * 92, y = this.player.y + Math.sin(a) * 92; const e = this.enemies.getChildren().find(v => dist({ x, y }, v as Enemy) < 44) as Enemy | undefined; if (e) this.hitEnemy({ damage: .55 * this.keys.attack, destroy: () => undefined, blast: 0 } as unknown as Bullet, e); } }
-
-  updateEnemies(dt: number, time: number) { for (const e of this.enemies.getChildren() as Enemy[]) { this.physics.moveToObject(e, this.player, e.speed); e.rotation = Math.atan2(e.body!.velocity.y, e.body!.velocity.x) + Math.PI / 2; if (e.kind !== 'low' && time > e.shootAt && dist(e, this.player) < 520) { this.damagePlayer(e.damage * .35); e.shootAt = time + 1500; } } for (const b of this.bullets.getChildren() as Bullet[]) { b.life -= dt * 1000; if (b.homing) { const t = this.nearestEnemy(620); if (t) this.physics.moveToObject(b, t, 440); } if (b.life <= 0) b.destroy(); } }
-  updateDrops(dt: number) { for (const d of this.drops.getChildren() as Drop[]) if (dist(d, this.player) < this.keys.magnet) this.physics.moveToObject(d, this.player, 260 + 700 * dt); }
-
-  checkPlanets(time: number) { let dock: Planet | undefined; for (const p of this.planets) { const d = dist(this.player, p); if (d < p.radius + 85 && p.kind === 'neutral') dock = p; if (d < p.range && p.kind !== 'neutral' && time > this.timers.spawn) { this.spawnEnemy(p); this.timers.spawn = time + Math.max(220, 950 - this.day() * 16); } if (d < p.radius + 40 && !p.visited) { p.visited = true; this.keys.explored++; this.save.explored = Math.max(this.save.explored, this.keys.explored); } } this.lastDock = dock; }
-  spawnEnemy(p: Planet) { const a = Phaser.Math.FloatBetween(0, Math.PI * 2); const kind = p.kind === 'ultimate' ? 'high' : p.kind; const key = kind === 'low' ? 'enemy_low' : kind === 'mid' ? 'enemy_mid' : 'enemy_high'; const e = this.enemies.create(p.x + Math.cos(a) * p.radius, p.y + Math.sin(a) * p.radius, key) as Enemy; e.setDisplaySize(50, 50).setCircle(24).setDepth(12); e.kind = p.kind; e.maxHp = (35 + p.level * 12) * (p.kind === 'ultimate' ? 3 : 1); e.hp = e.maxHp; e.speed = 70 + p.level * 8 + (p.kind === 'low' ? 35 : 0); e.damage = 8 + p.level * 1.5; e.xp = 10 + p.level * 2; e.coins = 3 + p.level; e.shootAt = 0; }
-  updateCivEvents(time: number) { if (time < this.timers.hazard) return; this.timers.hazard = time + 1800; for (const c of civs) if (this.day() >= c.day) { const p = Phaser.Utils.Array.GetRandom(this.planets.filter(v => v.kind !== 'neutral')) || { x: this.player.x + 600, y: this.player.y }; this.spawnEnemy({ ...p, kind: c.id === 'hive' ? 'low' : c.id === 'machine' ? 'mid' : 'ultimate', level: Math.ceil(this.day() / 2), radius: 20 } as Planet); if (c.id === 'gravity') this.physics.moveTo(this.player, p.x, p.y, 34); } }
-
-  hitEnemy(b: Bullet, e: Enemy) { e.hp -= b.damage; if (b.blast) for (const other of this.enemies.getChildren() as Enemy[]) if (dist(e, other) < b.blast) other.hp -= b.damage * .55; b.destroy(); if (e.hp <= 0) { this.keys.kills++; this.drop(e.x, e.y, 'xp', e.xp); this.drop(e.x + 12, e.y, 'coin', e.coins); if (Math.random() < .18) this.drop(e.x - 12, e.y, 'tech', 1); if (Math.random() < .025) this.randomWeapon(); e.destroy(); } }
-  drop(x: number, y: number, kind: DropKind, value: number) { const d = this.drops.create(x + Phaser.Math.Between(-12, 12), y + Phaser.Math.Between(-12, 12), kind === 'coin' ? 'coin' : kind === 'xp' ? 'xp' : kind === 'tech' ? 'tech' : 'black_box') as Drop; d.kind = kind; d.value = value; d.setDisplaySize(28, 28).setCircle(14).setDepth(10); }
-  pickDrop(d: Drop) { if (d.kind === 'coin') this.keys.coins += d.value; if (d.kind === 'tech') { this.keys.tech += d.value; this.save.tech += d.value; } if (d.kind === 'xp') { this.keys.xp += d.value; if (this.keys.xp >= this.needXp()) this.levelUp(); } if (d.kind === 'black_box' && this.save.blackBox) { this.keys.coins += Math.round(this.save.blackBox.coins * (.35 + this.save.meta.recovery * .05)); this.keys.tech += 2; this.save.blackBoxes++; delete this.save.blackBox; saveGame(this.save); } d.destroy(); }
-  needXp() { return 70 + this.keys.level * 42; }
-  levelUp() { this.keys.xp -= this.needXp(); this.keys.level++; this.openLevelUp(); }
-  damagePlayer(v: number) { const s = Math.min(this.keys.shield, v); this.keys.shield -= s; this.keys.hp -= v - s; if (this.keys.hp <= 0) this.die(); }
-  day() { return Math.max(0, (this.time.now - this.runStart) / DAY_MS + 1); }
-
-  createUi() { this.ui = this.add.container(0, 0).setScrollFactor(0).setDepth(1000).setName('uiRoot'); this.overlay = this.add.container(0, 0).setScrollFactor(0).setDepth(2000).setName('overlayRoot'); }
-  panel(x: number, y: number, w: number, h: number, color = 0x0b1735) { return this.add.rectangle(x, y, w, h, color, .78).setOrigin(0).setStrokeStyle(3, 0x7df9ff, .35); }
-  updateUi() { this.ui.removeAll(true); const g = this.add.graphics(); this.ui.add(g); this.ui.add(this.panel(18, 16, 300, 112)); this.ui.add(this.text(34, 28, `生命 ${Math.ceil(this.keys.hp)}/${this.keys.maxHp}  护盾 ${Math.ceil(this.keys.shield)}/${this.keys.maxShield}`)); this.ui.add(this.text(34, 58, `等级 ${this.keys.level}  经验 ${Math.floor(this.keys.xp)}/${this.needXp()}  金币 ${this.keys.coins}  科技 ${this.keys.tech}`)); this.ui.add(this.text(34, 88, `击杀 ${this.keys.kills}  探索星球 ${this.keys.explored}`)); this.ui.add(this.panel(515, 14, 250, 48)); this.ui.add(this.text(640, 25, `存活第 ${this.day().toFixed(1)} 天`, 22).setOrigin(.5,0)); this.drawMiniMap(); this.drawWeapons(); this.drawCivs(); if (this.lastDock) this.dockButton(); this.drawBlackBoxArrow(); }
-  text(x: number, y: number, s: string, size = 16, color = '#eaf8ff') { return this.add.text(x, y, s, { fontFamily: 'Microsoft YaHei,Arial', fontSize: `${size}px`, color, stroke: '#10203c', strokeThickness: 4 }); }
-  drawMiniMap() { this.ui.add(this.panel(1050, 16, 210, 150)); const g = this.add.graphics(); this.ui.add(g); g.lineStyle(2, 0x9cecff, .5).strokeCircle(1155, 91, 58); g.fillStyle(0x66e3ff).fillCircle(1155, 91, 5); const scale = .045; for (const p of this.planets.filter(p => dist(p, this.player) < 1300)) { const col = p.kind === 'neutral' ? 0x54ffcc : p.kind === 'ultimate' ? 0xff5a79 : 0xffd36d; g.fillStyle(col).fillCircle(1155 + (p.x - this.player.x) * scale, 91 + (p.y - this.player.y) * scale, p.kind === 'neutral' ? 5 : 4); } for (const e of (this.enemies.getChildren() as Enemy[]).slice(0, 20)) g.fillStyle(0xff5577).fillCircle(1155 + (e.x - this.player.x) * scale, 91 + (e.y - this.player.y) * scale, 2); this.ui.add(this.text(1070, 140, '小地图：蓝=你 绿=中立 红=追击', 12, '#bfefff')); }
-  drawWeapons() { this.ui.add(this.panel(18, 585, 370, 112)); this.ui.add(this.text(34, 596, '当前武器', 17)); (Object.keys(this.weapons) as WeaponId[]).forEach((w, i) => { if (this.weapons[w]) { this.ui.add(this.add.image(52 + i * 54, 650, `weapon_${w}`).setDisplaySize(40, 40)); this.ui.add(this.text(64 + i * 54, 668, `Lv.${this.weapons[w]}`, 12).setOrigin(.5)); } }); }
-  drawCivs() { this.ui.add(this.panel(1030, 184, 230, 318)); this.ui.add(this.text(1046, 196, '七大终极文明苏醒', 17)); civs.forEach((c, i) => { const p = Phaser.Math.Clamp(this.day() / c.day, 0, 1); const y = 230 + i * 36; this.ui.add(this.add.image(1048, y + 8, `civ_${c.id}`).setDisplaySize(24, 24)); this.ui.add(this.text(1066, y, `${c.zh} ${(p * 100).toFixed(0)}%`, 12, p >= 1 ? '#ff9db5' : '#dffbff')); this.ui.add(this.add.rectangle(1066, y + 22, 138 * p, 6, c.color).setOrigin(0)); if (p >= 1) this.ui.add(this.text(1200, y, c.event, 10, '#ffd36d')); }); }
-  dockButton() { const b = this.add.rectangle(1060, 525, 190, 54, 0x54ffcc, .85).setOrigin(0).setStrokeStyle(4, 0x10203c); const t = this.text(1155, 540, '停靠中立星球', 18, '#10203c').setOrigin(.5,0); b.setInteractive().on('pointerdown', () => this.openDock()); this.ui.add([b,t]); }
-  drawBlackBoxArrow() { const bb = this.save.blackBox; if (!bb) return; const a = Phaser.Math.Angle.Between(this.player.x, this.player.y, bb.x, bb.y); this.ui.add(this.text(520, 70, `黑匣子 ${Math.round(dist(this.player, bb))}m ↗`, 15, '#ffd36d')); }
-
-  openMenu(kind: GameMode) { this.mode = kind; this.overlay.removeAll(true); this.overlay.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x02030a, .78).setOrigin(0)); this.overlay.add(this.text(640, 92, '迷失深空：远征者', 42, '#7df9ff').setOrigin(.5)); this.overlay.add(this.text(640, 144, 'Lost Deep Space: Drifter', 18, '#ffd36d').setOrigin(.5)); const items = kind === 'meta' ? ['初始生命提升','初始护盾提升','初始攻击力提升','初始雷达范围提升','黑匣子回收效率提升','中立商店折扣','返回主菜单'] : ['开始游戏','继续远征','永久升级','文明图鉴']; items.forEach((label, i) => this.button(500, 210 + i * 62, 280, 46, label, () => this.menuAction(label))); this.overlay.add(this.text(640, 655, `纪录：${this.save.bestDays.toFixed(1)}天 / ${this.save.bestKills}击杀 / ${this.save.explored}星球 / 黑匣子${this.save.blackBoxes}次 / 永久科技${this.save.tech}`, 15).setOrigin(.5)); }
-  menuAction(label: string) { if (label.includes('开始') || label.includes('继续')) this.startRun(); else if (label === '永久升级') this.openMenu('meta'); else if (label === '文明图鉴') this.codex(); else if (label === '返回主菜单') this.openMenu('menu'); else { const keys = ['hp','shield','attack','radar','recovery','discount']; const names = ['初始生命提升','初始护盾提升','初始攻击力提升','初始雷达范围提升','黑匣子回收效率提升','中立商店折扣']; const idx = names.indexOf(label); if (idx >= 0 && this.save.tech >= 3 + this.save.meta[keys[idx]]) { this.save.tech -= 3 + this.save.meta[keys[idx]]; this.save.meta[keys[idx]]++; saveGame(this.save); this.openMenu('meta'); } } }
-  button(x: number, y: number, w: number, h: number, label: string, cb: () => void) { const r = this.add.rectangle(x, y, w, h, 0x162a58, .95).setOrigin(0).setStrokeStyle(3, 0x7df9ff); const t = this.text(x + w / 2, y + 12, label, 18).setOrigin(.5, 0); r.setInteractive({ useHandCursor: true }).on('pointerdown', cb).on('pointerover', () => r.setFillStyle(0x24447e)); this.overlay.add([r,t]); }
-  openDock() { this.mode = 'docked'; this.overlay.removeAll(true); this.overlay.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x02030a, .62).setOrigin(0)); this.overlay.add(this.text(640, 120, `停靠：${this.lastDock?.name ?? '中立星球'}`, 32, '#54ffcc').setOrigin(.5)); ['修理飞船 20金币','购买武器 45金币','升级模块 30金币','传送到更危险星域','查看文明图鉴','查看黑匣子坐标','离港'].forEach((l,i)=>this.button(490,190+i*58,300,44,l,()=>this.dockAction(l))); }
-  dockAction(l: string) { const discount = 1 - this.save.meta.discount * .04; if (l.startsWith('修理') && this.keys.coins >= 20 * discount) { this.keys.coins -= Math.ceil(20 * discount); this.keys.hp = this.keys.maxHp; } else if (l.startsWith('购买') && this.keys.coins >= 45 * discount) { this.keys.coins -= Math.ceil(45 * discount); this.randomWeapon(); } else if (l.startsWith('升级') && this.keys.coins >= 30 * discount) { this.keys.coins -= Math.ceil(30 * discount); this.openLevelUp(); return; } else if (l.startsWith('传送')) { this.player.setPosition(this.player.x + 1600, this.player.y - 900); } else if (l.startsWith('查看文明')) { this.codex(); return; } else if (l.startsWith('查看黑匣')) { this.overlay.add(this.text(640, 600, this.save.blackBox ? `坐标 X:${Math.round(this.save.blackBox.x)} Y:${Math.round(this.save.blackBox.y)}` : '暂无黑匣子', 18, '#ffd36d').setOrigin(.5)); return; } this.mode = 'playing'; this.overlay.removeAll(true); }
-  codex() { this.overlay.removeAll(true); this.overlay.add(this.add.rectangle(0,0,WIDTH,HEIGHT,0x02030a,.82).setOrigin(0)); this.overlay.add(this.text(640,72,'文明图鉴 / 后续 Boss 入口',30,'#7df9ff').setOrigin(.5)); civs.forEach((c,i)=>this.overlay.add(this.text(270,130+i*58,`${c.zh}：第${c.day}天苏醒，事件：${c.event}`,18))); this.button(520,610,240,48,'返回主菜单',()=>this.openMenu('menu')); }
-  openLevelUp() { this.mode = 'levelup'; this.overlay.removeAll(true); this.overlay.add(this.add.rectangle(0,0,WIDTH,HEIGHT,0x02030a,.72).setOrigin(0)); this.overlay.add(this.text(640,130,'升级！选择一个模块',32,'#ffd36d').setOrigin(.5)); Phaser.Utils.Array.Shuffle(this.upgrades()).slice(0,3).forEach((u,i)=>this.button(370+i*230,245,200,170,`${u.title}\n${u.desc}`,()=>{u.apply();this.overlay.removeAll(true);this.mode='playing';})); }
-  upgrades(): Upgrade[] { return [ {title:'激光伤害 +20%',desc:'自动激光更疼',icon:'laser',apply:()=>this.keys.attack+=.2}, {title:'导弹数量 +1',desc:'更多追踪导弹',icon:'missile',apply:()=>this.weapons.missile++}, {title:'飞船速度 +10%',desc:'走位更灵活',icon:'ship',apply:()=>this.keys.speed*=1.1}, {title:'护盾上限 +15%',desc:'更耐打',icon:'shield',apply:()=>this.keys.maxShield*=1.15}, {title:'金币吸取范围 +20%',desc:'少走弯路',icon:'ship',apply:()=>this.keys.magnet*=1.2}, {title:'无人机数量 +1',desc:'环绕切割',icon:'drone',apply:()=>this.weapons.drone++}, {title:'暴击率 +5%',desc:'偶尔双倍',icon:'laser',apply:()=>this.keys.crit+=.05}, {title:'最大生命 +20',desc:'续航提升',icon:'shield',apply:()=>{this.keys.maxHp+=20;this.keys.hp+=20}}, {title:'解锁 EMP',desc:'范围电磁脉冲',icon:'emp',apply:()=>this.weapons.emp++}, {title:'黑洞炸弹 +1',desc:'小范围引力爆破',icon:'blackhole',apply:()=>this.weapons.blackhole++} ]; }
-  randomWeapon() { const w = Phaser.Utils.Array.GetRandom(Object.keys(this.weapons) as WeaponId[]); this.weapons[w]++; }
-  die() { this.mode = 'dead'; const days = this.day(); this.save.bestDays = Math.max(this.save.bestDays, days); this.save.bestKills = Math.max(this.save.bestKills, this.keys.kills); this.save.explored = Math.max(this.save.explored, this.keys.explored); this.save.blackBox = { x: this.player.x, y: this.player.y, days, coins: Math.round(this.keys.coins * .45), weapon: Phaser.Utils.Array.GetRandom(Object.keys(this.weapons) as WeaponId[]) }; saveGame(this.save); this.overlay.removeAll(true); this.overlay.add(this.add.rectangle(0,0,WIDTH,HEIGHT,0x02030a,.82).setOrigin(0)); this.overlay.add(this.text(640,150,'飞船失联，黑匣子已记录',34,'#ff9db5').setOrigin(.5)); this.overlay.add(this.text(640,220,`存活 ${days.toFixed(1)} 天 / 击杀 ${this.keys.kills} / 探索 ${this.keys.explored} 星球`,20).setOrigin(.5)); this.overlay.add(this.text(640,260,`黑匣子坐标 X:${Math.round(this.player.x)} Y:${Math.round(this.player.y)}，下一局可追踪回收。`,18,'#ffd36d').setOrigin(.5)); this.button(500,335,280,50,'返回主菜单',()=>this.openMenu('menu')); }
-  spawnBlackBox() { if (this.save.blackBox) this.drop(this.save.blackBox.x, this.save.blackBox.y, 'black_box', 1); }
-  createJoystick() { const base = this.add.circle(96, HEIGHT - 96, 58, 0x7df9ff, .12).setStrokeStyle(3, 0x7df9ff, .25).setScrollFactor(0).setDepth(1200); const knob = this.add.circle(96, HEIGHT - 96, 24, 0x7df9ff, .35).setScrollFactor(0).setDepth(1201); this.joystick = { base, knob, x: 96, y: HEIGHT - 96, dx: 0, dy: 0 }; this.input.on('pointerdown', (p: Phaser.Input.Pointer) => { if (p.x < 220 && p.y > HEIGHT - 220 && this.joystick) this.joystick.pointer = p.id; }); this.input.on('pointermove', (p: Phaser.Input.Pointer) => { const j = this.joystick; if (!j || j.pointer !== p.id) return; const a = Phaser.Math.Angle.Between(j.x,j.y,p.x,p.y), d = Math.min(58, Phaser.Math.Distance.Between(j.x,j.y,p.x,p.y)); j.dx = Math.cos(a) * d / 58; j.dy = Math.sin(a) * d / 58; j.knob.setPosition(j.x + j.dx * 58, j.y + j.dy * 58); }); this.input.on('pointerup', (p: Phaser.Input.Pointer) => { const j = this.joystick; if (j?.pointer === p.id) { j.pointer = undefined; j.dx = 0; j.dy = 0; j.knob.setPosition(j.x,j.y); } }); }
-}
-
-new Phaser.Game({ type: Phaser.AUTO, parent: 'app', width: WIDTH, height: HEIGHT, backgroundColor: '#050719', physics: { default: 'arcade', arcade: { debug: false } }, scene: MainScene, scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH } });
+const ASSETS=['ship_player','enemy_low','enemy_mid','enemy_high','planet_low','planet_mid','planet_high','planet_neutral','coin','xp','tech','weapon_laser','weapon_missile','weapon_drone','weapon_shield','weapon_emp','weapon_blackhole','black_box','civ_hive','civ_machine','civ_crystal','civ_gravity','civ_void','civ_time','civ_core'];
+const CIVS=['虫巢母星','机械母星','水晶母星','引力母星','虚空母星','时间母星','深空核心'];
+const state={mode:'menu',day:1,kills:0,planets:0,level:1,xp:0,coins:0,tech:0,dead:false,dock:false,upgrade:false,blackBoxRecovered:false};
+const saveKey='lost-deep-space-drifter-save-v1';
+const save=JSON.parse(localStorage.getItem(saveKey)||'{"bestDay":0,"bestKills":0,"blackBoxes":0,"permanent":{"hp":0,"shield":0,"attack":0,"radar":0}}');
+const app=document.querySelector('#app');
+app.innerHTML='<canvas id="game"></canvas><div class="hint">WASD / 方向键移动 · 自动攻击 · 手机可拖动左下虚拟摇杆</div>';
+const canvas=document.querySelector('#game'),ctx=canvas.getContext('2d');
+new Phaser.Game({title:'Lost Deep Space: Drifter',type:Phaser.AUTO});
+let W=0,H=0,keys={},touch=null,last=0,shoot=0,player,planets=[],enemies=[],loot=[],shots=[],menuStars=[];
+function imgUrl(n){return new URL('../assets/'+n+'.svg',import.meta.url).href}
+function resize(){W=canvas.width=innerWidth*devicePixelRatio;H=canvas.height=innerHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0)}addEventListener('resize',resize);resize();
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key==='Enter'&&state.mode==='menu')start()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+canvas.addEventListener('pointerdown',e=>{const x=e.clientX,y=e.clientY;if(state.mode==='menu'){start();return}clickUi(x,y);if(x<170&&y>innerHeight-170)touch={id:e.pointerId,x,y,dx:0,dy:0}});canvas.addEventListener('pointermove',e=>{if(touch&&touch.id===e.pointerId){touch.dx=e.clientX-touch.x;touch.dy=e.clientY-touch.y}});canvas.addEventListener('pointerup',e=>{if(touch&&touch.id===e.pointerId)touch=null});
+function resetWorld(){Object.assign(state,{mode:'play',day:1,kills:0,planets:0,level:1,xp:0,coins:0,tech:0,dead:false,dock:false,upgrade:false,blackBoxRecovered:false});player={x:0,y:0,hp:120+save.permanent.hp*20,maxHp:120+save.permanent.hp*20,shield:60+save.permanent.shield*10,maxShield:60+save.permanent.shield*10,speed:220,attack:18+save.permanent.attack*4,radar:900+save.permanent.radar*80,magnet:120,weapons:['自动激光','追踪导弹','环绕无人机','能量护盾','电磁脉冲','黑洞炸弹']};planets=[];enemies=[];loot=[];shots=[];for(let i=-3;i<=3;i++)for(let j=-3;j<=3;j++)spawnPlanet(i,j);planets.push({x:180,y:80,r:58,type:'neutral',name:'晨星港'});if(save.blackBox)loot.push({x:save.blackBox.x,y:save.blackBox.y,r:22,type:'black_box',value:save.blackBox.coins||20});}
+function start(){resetWorld()}function spawnPlanet(i,j){const seed=Math.sin(i*91+j*37)*9999,rx=(seed%1)*420,ry=((seed*7)%1)*420;const types=['low','mid','high'];const type=(Math.abs(i)+Math.abs(j))%11===0?'neutral':types[Math.abs(Math.floor(seed*3))%3];planets.push({x:i*820+rx,y:j*820+ry,r:type==='neutral'?54:70,type,name:type==='neutral'?'中立星港':type==='low'?'低等星球':type==='mid'?'中等星球':'高等星球',angry:false});}
+function update(dt){if(state.mode!=='play'||state.upgrade||state.dock)return;state.day+=dt/60;let ax=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0),ay=(keys.s||keys.arrowdown?1:0)-(keys.w||keys.arrowup?1:0);if(touch){ax=Phaser.Math.Clamp(touch.dx/55,-1,1);ay=Phaser.Math.Clamp(touch.dy/55,-1,1)}const len=Math.hypot(ax,ay)||1;player.x+=ax/len*player.speed*dt;player.y+=ay/len*player.speed*dt;for(const p of planets){const d=Math.hypot(player.x-p.x,player.y-p.y);if(d<player.radar&&!p.seen){p.seen=true;state.planets++}if(p.type==='neutral'&&d<p.r+80)state.dockPrompt=true;else if(p.type!=='neutral'&&d<p.r+230&&!p.angry){p.angry=true;for(let k=0;k<5+(p.type==='high'?5:0);k++)spawnEnemy(p)}}if(!planets.some(p=>p.type==='neutral'&&Math.hypot(player.x-p.x,player.y-p.y)<p.r+80))state.dockPrompt=false;if(state.day>3&&Math.random()<dt*.7)spawnEnemy({x:player.x+700-Math.random()*1400,y:player.y+700-Math.random()*1400,type:'high'});for(const e of enemies){const a=Math.atan2(player.y-e.y,player.x-e.x);e.x+=Math.cos(a)*e.speed*dt;e.y+=Math.sin(a)*e.speed*dt;if(Math.hypot(player.x-e.x,player.y-e.y)<28){player.shield-=e.damage*dt;if(player.shield<0){player.hp+=player.shield;player.shield=0}}}shoot-=dt;if(shoot<=0){autoAttack();shoot=.35}for(const s of shots){s.x+=s.vx*dt;s.y+=s.vy*dt;s.life-=dt;for(const e of enemies)if(e.hp>0&&Math.hypot(s.x-e.x,s.y-e.y)<24){e.hp-=s.damage;s.life=0}}shots=shots.filter(s=>s.life>0);for(const e of enemies.filter(e=>e.hp<=0)){state.kills++;drop(e);enemies.splice(enemies.indexOf(e),1)}for(const l of loot){const d=Math.hypot(player.x-l.x,player.y-l.y);if(d<player.magnet){l.x+=(player.x-l.x)*dt*4;l.y+=(player.y-l.y)*dt*4}if(d<28)collect(l)}loot=loot.filter(l=>!l.gone);player.shield=Math.min(player.maxShield,player.shield+dt*2);if(player.hp<=0)die();}
+function spawnEnemy(p){const t=p.type==='high'?'high':p.type==='mid'?'mid':'low';enemies.push({x:p.x+Math.random()*180-90,y:p.y+Math.random()*180-90,hp:t==='high'?70:t==='mid'?45:28,speed:t==='high'?95:t==='mid'?120:145,damage:t==='high'?18:12,type:t});}
+function autoAttack(){let e=enemies.sort((a,b)=>Math.hypot(player.x-a.x,player.y-a.y)-Math.hypot(player.x-b.x,player.y-b.y))[0];if(!e)return;const a=Math.atan2(e.y-player.y,e.x-player.x);shots.push({x:player.x,y:player.y,vx:Math.cos(a)*620,vy:Math.sin(a)*620,life:1,damage:player.attack});}
+function drop(e){loot.push({x:e.x,y:e.y,r:12,type:'coin',value:3},{x:e.x+18,y:e.y,r:12,type:'xp',value:28});if(Math.random()<.35)loot.push({x:e.x-16,y:e.y,r:12,type:'tech',value:1});}
+function collect(l){l.gone=true;if(l.type==='coin')state.coins+=l.value;if(l.type==='tech')state.tech+=l.value;if(l.type==='xp'){state.xp+=l.value;if(state.xp>=100){state.xp-=100;state.level++;state.upgrade=true}}if(l.type==='black_box'){state.blackBoxRecovered=true;state.coins+=l.value;save.blackBoxes=(save.blackBoxes||0)+1;delete save.blackBox;persist()}}
+function die(){state.mode='dead';state.dead=true;save.bestDay=Math.max(save.bestDay,Math.floor(state.day));save.bestKills=Math.max(save.bestKills,state.kills);save.blackBox={x:player.x,y:player.y,day:Math.floor(state.day),coins:Math.floor(state.coins*.5),weapon:'自动激光'};persist()}function persist(){localStorage.setItem(saveKey,JSON.stringify(save))}
+function clickUi(x,y){if(state.upgrade){player.attack*=1.2;player.maxHp+=20;state.upgrade=false;return}if(state.mode==='dead'){start();return}if(state.dock){state.dock=false;return}if(state.dockPrompt&&x>innerWidth-190&&y>innerHeight-90){state.dock=true;player.hp=player.maxHp;return}}
+function draw(){ctx.clearRect(0,0,innerWidth,innerHeight);drawSpace();if(state.mode==='menu')return drawMenu();const cx=innerWidth/2-player.x,cy=innerHeight/2-player.y;for(const p of planets)drawPlanet(p,cx,cy);for(const l of loot)drawIcon(l.type,l.x+cx,l.y+cy,l.r*2);for(const e of enemies)drawEnemy(e,cx,cy);for(const s of shots){ctx.strokeStyle='#83f7ff';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(s.x+cx,s.y+cy);ctx.lineTo(s.x+cx-s.vx*.035,s.y+cy-s.vy*.035);ctx.stroke()}drawShip(innerWidth/2,innerHeight/2);drawHud();if(state.upgrade)panel('升级选择','激光伤害 +20%\n最大生命 +20\n点击任意位置继续');if(state.dock)panel('中立星球停靠','已修理飞船\n商店 / 升级 / 传送 / 文明图鉴 / 黑匣子坐标\n点击关闭');if(state.mode==='dead')panel('远征结束','存活 '+Math.floor(state.day)+' 天 · 击杀 '+state.kills+'\n已记录黑匣子坐标\n点击开始下一局');}
+function drawSpace(){ctx.fillStyle='#06102d';ctx.fillRect(0,0,innerWidth,innerHeight);ctx.fillStyle='#fff';for(let i=0;i<90;i++){const x=(i*97+state.day*3)%innerWidth,y=(i*53)%innerHeight;ctx.globalAlpha=.25+(i%5)/10;ctx.beginPath();ctx.arc(x,y,i%3+1,0,7);ctx.fill()}ctx.globalAlpha=1;}
+function drawMenu(){panel('迷失深空：远征者','Lost Deep Space: Drifter\n开始游戏 / 继续远征 / 永久升级 / 文明图鉴\n点击屏幕开始\nGitHub Pages: /space-game/');}
+function drawShip(x,y){ctx.fillStyle='#67e8f9';ctx.strokeStyle='#082f49';ctx.lineWidth=5;ctx.beginPath();ctx.roundRect(x-22,y-28,44,56,18);ctx.fill();ctx.stroke();ctx.fillStyle='#fde68a';ctx.beginPath();ctx.arc(x,y-8,12,0,7);ctx.fill();ctx.stroke();}
+function drawEnemy(e,cx,cy){drawIcon('enemy_'+e.type,e.x+cx,e.y+cy,42)}function drawPlanet(p,cx,cy){const x=p.x+cx,y=p.y+cy;drawIcon('planet_'+p.type,x,y,p.r*2);if(p.angry){ctx.strokeStyle='#fb7185';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,p.r+70,0,7);ctx.stroke()}}
+function drawIcon(type,x,y,size){ctx.fillStyle=type.includes('coin')?'#facc15':type.includes('xp')?'#60a5fa':type.includes('tech')?'#a78bfa':type.includes('neutral')?'#86efac':'#fb7185';ctx.strokeStyle='#10213f';ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,size/2,0,7);ctx.fill();ctx.stroke();}
+function drawHud(){ctx.fillStyle='rgba(8,18,45,.78)';ctx.strokeStyle='#6ee7ff';ctx.lineWidth=2;ctx.roundRect(12,12,250,92,16);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.font='15px sans-serif';ctx.fillText(`生命 ${Math.max(0,Math.floor(player.hp))}/${player.maxHp}  护盾 ${Math.floor(player.shield)}`,26,40);ctx.fillText(`等级 ${state.level}  XP ${state.xp}/100  金币 ${state.coins}`,26,66);ctx.fillText(`科技碎片 ${state.tech}`,26,90);ctx.textAlign='center';ctx.fillText(`存活第 ${Math.floor(state.day)} 天`,innerWidth/2,30);ctx.textAlign='left';ctx.fillStyle='rgba(8,18,45,.78)';ctx.roundRect(innerWidth-182,14,168,150,16);ctx.fill();ctx.fillStyle='#fff';ctx.fillText('小地图',innerWidth-164,38);ctx.fillStyle='#67e8f9';ctx.fillRect(innerWidth-100,85,6,6);for(const p of planets.slice(0,20)){const mx=innerWidth-98+(p.x-player.x)/60,my=88+(p.y-player.y)/60;if(mx>innerWidth-175&&mx<innerWidth-20&&my>48&&my<155){ctx.fillStyle=p.type==='neutral'?'#86efac':'#fca5a5';ctx.fillRect(mx,my,4,4)}}ctx.fillStyle='rgba(8,18,45,.78)';ctx.roundRect(innerWidth-210,180,196,190,16);ctx.fill();ctx.fillStyle='#fff';ctx.fillText('七大终极文明苏醒',innerWidth-196,205);CIVS.forEach((c,i)=>{ctx.fillText(`${c} ${Math.min(100,Math.floor(state.day/(3+i)*100))}%`,innerWidth-196,230+i*20)});ctx.fillText('武器：激光 导弹 无人机 护盾 EMP 黑洞',20,innerHeight-24);if(state.dockPrompt){ctx.fillStyle='#34d399';ctx.roundRect(innerWidth-190,innerHeight-82,170,54,18);ctx.fill();ctx.fillStyle='#06281d';ctx.fillText('停靠中立星球',innerWidth-160,innerHeight-50)}}
+function panel(title,text){ctx.fillStyle='rgba(8,18,45,.92)';ctx.strokeStyle='#7dd3fc';ctx.lineWidth=4;ctx.roundRect(innerWidth/2-230,innerHeight/2-150,460,300,24);ctx.fill();ctx.stroke();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='24px sans-serif';ctx.fillText(title,innerWidth/2,innerHeight/2-96);ctx.font='16px sans-serif';text.split('\n').forEach((t,i)=>ctx.fillText(t,innerWidth/2,innerHeight/2-42+i*34));ctx.textAlign='left'}
+function loop(t){const dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+window.__LDSD_VERIFY__={state,start,step:(n=120)=>{for(let i=0;i<n;i++)update(1/60)},spawnEnemy:()=>spawnEnemy({x:player.x+90,y:player.y,type:'low'}),killOne:()=>{if(!enemies[0])spawnEnemy({x:player.x+50,y:player.y,type:'low'});enemies[0].hp=0;update(1/60)},dock:()=>{state.dockPrompt=true;state.dock=true},level:()=>{state.upgrade=true;state.level++},die,save,assets:ASSETS.map(imgUrl)};

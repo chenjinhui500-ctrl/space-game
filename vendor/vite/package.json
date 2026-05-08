@@ -1,6 +1,1 @@
-{
-  "name": "vite",
-  "version": "7.1.12-local-offline",
-  "type": "module",
-  "bin": { "vite": "bin/vite.js" }
-}
+{"name":"vite","version":"5.4.0-clean-local","type":"module","bin":{"vite":"bin/vite.js"}}

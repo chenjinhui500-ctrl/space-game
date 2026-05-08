@@ -1,76 +1,9 @@
 #!/usr/bin/env node
-import { createServer } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
-
-const root = process.cwd();
-const tmp = join(root, '.vite-temp');
-const args = process.argv.slice(2);
-const isBuild = args[0] === 'build';
-const portArg = args.find(a => a.startsWith('--port='));
-const port = portArg ? Number(portArg.split('=')[1]) : 5173;
-
-function compile() {
-  rmSync(tmp, { recursive: true, force: true });
-  mkdirSync(tmp, { recursive: true });
-  const tsc = spawnSync('tsc', [
-    '--outDir', tmp, '--rootDir', 'src', '--module', 'ES2022', '--target', 'ES2022',
-    '--moduleResolution', 'bundler', '--skipLibCheck', 'true', '--noEmit', 'false',
-    '--declaration', 'false', '--sourceMap', 'false', '--noEmitOnError', 'false'
-  ], { cwd: root, encoding: 'utf8' });
-  if (tsc.stdout) process.stdout.write(tsc.stdout);
-  if (tsc.stderr) process.stderr.write(tsc.stderr);
-  const main = join(tmp, 'main.js');
-  if (!existsSync(main)) throw new Error('TypeScript emit failed: .vite-temp/main.js was not created');
-  let js = readFileSync(main, 'utf8');
-  js = js.replace(/import\s+['"]\.\/styles\.css['"];?\s*/g, '');
-  js = js.replace(/import\s+Phaser\s+from\s+['"]phaser['"];?/, "import Phaser from '/node_modules/phaser/index.js';");
-  writeFileSync(main, js);
-  return js;
-}
-
-function contentType(file) {
-  return ({ '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.ts':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.svg':'image/svg+xml', '.json':'application/json' })[extname(file)] || 'application/octet-stream';
-}
-
-function transformIndex(html, build = false) {
-  const link = '<link rel="stylesheet" href="/src/styles.css"/>';
-  html = html.includes('src/styles.css') ? html : html.replace('</head>', `${link}</head>`);
-  if (build) html = html.replace('/src/main.ts', '/assets/main.js').replace('/src/styles.css', '/assets/styles.css');
-  return html;
-}
-
-if (isBuild) {
-  let js = compile();
-  const dist = join(root, 'dist');
-  rmSync(dist, { recursive: true, force: true });
-  mkdirSync(join(dist, 'assets'), { recursive: true });
-  if (existsSync(join(root, 'public'))) cpSync(join(root, 'public'), dist, { recursive: true });
-  js = js.replace("import Phaser from '/node_modules/phaser/index.js';", "import Phaser from './phaser.js';");
-  writeFileSync(join(dist, 'assets', 'main.js'), js);
-  writeFileSync(join(dist, 'assets', 'phaser.js'), readFileSync(join(root, 'vendor', 'phaser', 'index.js')));
-  writeFileSync(join(dist, 'assets', 'styles.css'), readFileSync(join(root, 'src', 'styles.css')));
-  writeFileSync(join(dist, 'index.html'), transformIndex(readFileSync(join(root, 'index.html'), 'utf8'), true));
-  console.log('vite v7.1.12 local-offline build complete: dist/');
-  process.exit(0);
-}
-
-compile();
-const server = createServer((req, res) => {
-  try {
-    const url = decodeURIComponent((req.url || '/').split('?')[0]);
-    if (url === '/' || url === '/index.html') {
-      const html = transformIndex(readFileSync(join(root, 'index.html'), 'utf8'));
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(html); return;
-    }
-    if (url === '/src/main.ts') {
-      const js = compile();
-      res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' }); res.end(js); return;
-    }
-    const file = resolve(root, url.slice(1));
-    if (!file.startsWith(root) || !existsSync(file)) { res.writeHead(404); res.end('Not found'); return; }
-    res.writeHead(200, { 'content-type': contentType(file) }); res.end(readFileSync(file));
-  } catch (err) { res.writeHead(500, { 'content-type': 'text/plain' }); res.end(String(err?.stack || err)); }
-});
-server.listen(port, '0.0.0.0', () => console.log(`  VITE v7.1.12  ready in local-offline mode\n\n  ➜  Local:   http://localhost:${port}/\n`));
+import http from 'node:http';import fs from 'node:fs';import path from 'node:path';
+const root=process.cwd();const args=process.argv.slice(2);const cmd=args[0]||'dev';const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.ts':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml; charset=utf-8'};
+function transform(src){return src.replace("import Phaser from 'phaser';","import Phaser from './phaser.js';").replace('import "./styles.css";','');}
+function ensure(p){fs.mkdirSync(p,{recursive:true});}
+function copyDir(from,to){if(!fs.existsSync(from))return;ensure(to);for(const e of fs.readdirSync(from,{withFileTypes:true})){const a=path.join(from,e.name),b=path.join(to,e.name);e.isDirectory()?copyDir(a,b):fs.copyFileSync(a,b);}}
+function build(){fs.rmSync('dist',{recursive:true,force:true});ensure('dist/assets');copyDir('public','dist');fs.copyFileSync('src/styles.css','dist/assets/styles.css');fs.copyFileSync('vendor/phaser/index.js','dist/assets/phaser.js');fs.writeFileSync('dist/assets/main.js',transform(fs.readFileSync('src/main.ts','utf8')));fs.writeFileSync('dist/index.html','<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><title>迷失深空：远征者</title><link rel="stylesheet" href="./assets/styles.css"><script type="module" src="./assets/main.js"></script></head><body><div id="app"></div></body></html>');console.log('Clean Vite build complete: dist/');}
+function serve(base='.',port=5173){const server=http.createServer((req,res)=>{const url=decodeURIComponent((req.url||'/').split('?')[0]);let file=url==='/'?'index.html':url.slice(1);if(file==='src/main.ts'){res.setHeader('content-type',mime['.ts']);res.end(transform(fs.readFileSync('src/main.ts','utf8')).replace("./phaser.js","/assets/phaser.js"));return}if(file==='assets/phaser.js'&&!fs.existsSync(path.join(base,file)))file='vendor/phaser/index.js';const p=path.join(base,file);if(!fs.existsSync(p)||fs.statSync(p).isDirectory()){res.statusCode=404;res.end('not found');return}res.setHeader('content-type',mime[path.extname(p)]||'application/octet-stream');res.end(fs.readFileSync(p));});server.listen(port,()=>console.log(`Local Vite ${cmd} server running at http://localhost:${port}/`));}
+const port=Number(args[args.indexOf('--port')+1])||Number(process.env.PORT)|| (cmd==='preview'?4173:5173);if(cmd==='build')build();else if(cmd==='preview')serve('dist',port);else serve('.',port);
