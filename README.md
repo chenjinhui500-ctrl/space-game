@@ -17,16 +17,6 @@ npm run build
 ```
 
 
-## 在线试玩部署
-
-本仓库已配置 GitHub Pages 自动部署：每次 `main` 分支更新后，GitHub Actions 会自动执行 `npm install`、`npm run generate:assets`、`npm run build` 和 `node scripts/verify-runtime.mjs`，然后将 `dist/` 发布到 Pages。
-
-合并部署 PR 后，可在仓库顶部菜单 **Actions → Deploy GitHub Pages** 查看部署进度；完成后也可在 **Settings → Pages** 查看线上试玩地址。项目 Pages 地址格式通常为：
-
-```text
-https://<你的 GitHub 用户名或组织名>.github.io/space-game/
-```
-
 ## 资产生成
 
 项目内置了 `scripts/generate-assets.ts`。如果 `.env` 配置了外部图片生成服务，将从环境变量读取：

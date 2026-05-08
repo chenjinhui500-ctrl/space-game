@@ -20,7 +20,6 @@ const WIDTH = 1280;
 const HEIGHT = 720;
 const SAVE_KEY = 'lost-deep-space-drifter-save-v1';
 const DAY_MS = 60_000;
-const ASSET_BASE = new URL('../assets/', import.meta.url).href;
 const assets = ['ship_player','enemy_low','enemy_mid','enemy_high','planet_low','planet_mid','planet_high','planet_neutral','coin','xp','tech','black_box','weapon_laser','weapon_missile','weapon_drone','weapon_shield','weapon_emp','weapon_blackhole','civ_hive','civ_machine','civ_crystal','civ_gravity','civ_void','civ_time','civ_core'];
 const civs: Civilisation[] = [
   { id: 'hive', zh: '虫巢母星', day: 3, color: 0x7cff8a, event: '虫群追猎' },
@@ -58,7 +57,7 @@ class MainScene extends Phaser.Scene {
   lastDock?: Planet;
   joystick?: { base: Phaser.GameObjects.Arc; knob: Phaser.GameObjects.Arc; pointer?: number; x: number; y: number; dx: number; dy: number };
 
-  preload() { for (const key of assets) this.load.svg(key, `${ASSET_BASE}${key}.svg`, { width: 96, height: 96 }); }
+  preload() { for (const key of assets) this.load.svg(key, `/assets/${key}.svg`, { width: 96, height: 96 }); }
 
   create() {
     this.physics.world.setBounds(-1_000_000, -1_000_000, 2_000_000, 2_000_000);

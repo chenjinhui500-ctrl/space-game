@@ -38,6 +38,22 @@ jobs:
       - name: Build static site
         run: npm run build
 
+      - name: Normalize GitHub Pages asset paths
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const files = ['dist/index.html', 'dist/assets/main.js'];
+          for (const file of files) {
+            if (!fs.existsSync(file)) continue;
+            let content = fs.readFileSync(file, 'utf8');
+            content = content
+              .replaceAll('"/assets/', '"./assets/')
+              .replaceAll("'/assets/", "'./assets/")
+              .replaceAll('`/assets/', '`./assets/');
+            fs.writeFileSync(file, content);
+          }
+          NODE
+
       - name: Verify runtime smoke flow
         run: node scripts/verify-runtime.mjs
 
