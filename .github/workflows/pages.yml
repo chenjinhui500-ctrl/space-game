@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Deploy clean game to GitHub Pages
 
 on:
   push:
@@ -13,12 +13,15 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: clean-game-pages
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lost-deep-space-clean
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,9 +31,9 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
-      - name: Generate placeholder assets
+      - name: Generate SVG assets
         run: npm run generate:assets
-      - name: Build game
+      - name: Build H5 game
         run: npm run build
       - name: Verify runtime
         run: node scripts/verify-runtime.mjs
@@ -38,7 +41,8 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: lost-deep-space-clean/dist
+
   deploy:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build

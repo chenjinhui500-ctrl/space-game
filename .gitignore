@@ -1,5 +1,8 @@
-node_modules/
-dist/
-.DS_Store
 .env
-npm-debug.log*
+__pycache__/
+*.pyc
+.DS_Store
+assets/generated/raw/**/*.png
+assets/generated/contact_sheets/*.png
+assets/generated/reviewed/**/*.png
+assets/final/**/*.png
